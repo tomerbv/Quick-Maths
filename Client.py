@@ -1,5 +1,6 @@
 import msvcrt
 import socket
+import time
 
 
 class Client:
@@ -33,8 +34,8 @@ class Client:
             if(recieved_cookie == hex(self.magic_cookie) and int(recieved_type)==self.offer_message_type):
                 self.tcp_port = int(recieved_port,16)
                 self.ip = adress[0]
-            print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
-            self.server_found = True
+                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+                self.server_found = True
 
 
 
@@ -43,23 +44,33 @@ class Client:
 
         self.tcp_socket.connect((self.ip,self.tcp_port))
         team_msg = bytes(self.name,'UTF-8')
-        self.tcp_socket.send((team_msg))
+        self.tcp_socket.send(team_msg)
 
     def game_mode(self):
-        msg = self.tcp_socket.recv(1024)
-        print(msg.decode('UTF-8'))
-        self.tcp_socket.send(bytes("hi",'UTF-8'))
+        welcome = self.tcp_socket.recv(1024)
+        print(welcome.decode('UTF-8'))
+        char = None
+        # while char is None:
+        print("expecting char")
+        char = msvcrt.getch()
+        print("sent char")
+        self.tcp_socket.send(char)
+
 
 
     def start(self):
         self.looking_for_server()
         self.connecting_to_server()
         self.game_mode()
+        time.sleep(1)
+        print("waiting for final message")
+        msg = self.tcp_socket.recv(1024)
+        print(msg.decode('UTF-8'))
         self.tcp_socket.close()
         print("Server disconnected, listening for offer requests...")
 
-
 if __name__ == "__main__":
+    while True:
       client = Client()
       client.start()
 

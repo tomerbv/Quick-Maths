@@ -1,6 +1,8 @@
+import select
 import socket
 import time
-from threading import Thread
+from random import randint
+from threading import Thread, Event
 
 
 class Server:
@@ -24,6 +26,7 @@ class Server:
         while not self.players_ready():
             self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
+
 
     def players_ready(self):
         return self.client1 is not None and self.client2 is not None
@@ -50,22 +53,77 @@ class Server:
 
 
 
+    def wait_for_answer(self, reset_event, client, res, times, i):
+        current = time.time()
+        limit = current + 10
+        client.setblocking(0)
+        while not reset_event.is_set():
+            try:
+                res[i] = client.recv(1024)
+            except:
+                pass
+            if time.time() > limit:
+                reset_event.set()
+            if res[i] != 767:
+                times[i] = time.time() - current
+
 
     def game_mode(self):
-        self.client1.send(bytes("hello client", 'UTF-8'))
-        self.client2.send(bytes("hello client", 'UTF-8'))
-        ans1 = self.client1.recv(1024)
-        ans2 = self.client2.recv(1024)
-        print(ans1.decode('UTF-8'))
-        print(ans2.decode('UTF-8'))
-        self.tcp_socket.close()
+        num1 = randint(0,9)
+        num2 = randint(0,9 - num1)
+        res = num1 + num2
+        msg = "Welcome to Quick Maths.\n" \
+            f"Player 1: {self.client1_name} \n" \
+            f"Player 2: {self.client2_name} \n==\n" \
+            "Please answer the following question as fast as you can:\n" \
+            f"How much is {num1} + {num2}?"
+
+        self.client1.send(bytes(msg, 'UTF-8'))
+        self.client2.send(bytes(msg, 'UTF-8'))
+
+        results = [767, 767]
+        times = [10, 10]
+        reset_event = Event()
+
+        t1 = Thread(target=self.wait_for_answer, args=[reset_event, self.client1, results, times, 0])
+        t2 = Thread(target=self.wait_for_answer, args=[reset_event, self.client2, results, times, 1])
+        t1.start()
+        t2.start()
+
+        while not reset_event.is_set():
+            time.sleep(0.2)
+
+        print("over wait")
+        print(results)
+        print(times)
+        end_msg = f"Game over!\nThe correct answer was {res}!\n"
+
+        if(results[0] == 767 and results[1] == 767):
+            return end_msg + "Both of you are losers, next time don't sleep on your keyboard"
+
+        elif(times[0] < times[1]):
+            if(results[0] == res):
+                return end_msg + f"Congratulations to the winner: {self.client1_name}"
+            else:
+                return end_msg + f"Congratulations to the winner: {self.client2_name}"
+
+        elif (times[0] > times[1]):
+            if(results[1] == res):
+                return end_msg + f"Congratulations to the winner: {self.client2_name}"
+            else:
+                return end_msg + f"Congratulations to the winner: {self.client1_name}"
 
 
     def start(self):
         self.waiting_for_clients()
         print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
+        time.sleep(3)
         summary = self.game_mode()
-        print("done")
+        self.client1.send(bytes(summary, 'UTF-8'))
+        self.client2.send(bytes(summary, 'UTF-8'))
+        self.tcp_socket.close()
+        print("Game over, sending out offer requests...")
+
 
 while True:
     server = Server(18121)
