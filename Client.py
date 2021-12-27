@@ -1,5 +1,6 @@
 import msvcrt
 import socket
+import time
 
 
 class Client:
@@ -49,8 +50,10 @@ class Client:
         welcome = self.tcp_socket.recv(1024)
         print(welcome.decode('UTF-8'))
         char = None
-        while char is None:
-            char = msvcrt.getch()
+        # while char is None:
+        print("expecting char")
+        char = msvcrt.getch()
+        print("sent char")
         self.tcp_socket.send(char)
 
 
@@ -59,8 +62,10 @@ class Client:
         self.looking_for_server()
         self.connecting_to_server()
         self.game_mode()
-        msg = self.tcp_socket.recv(1024).decode('UTF-8')
-        print(msg)
+        time.sleep(1)
+        print("waiting for final message")
+        msg = self.tcp_socket.recv(1024)
+        print(msg.decode('UTF-8'))
         self.tcp_socket.close()
         print("Server disconnected, listening for offer requests...")
 

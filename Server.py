@@ -1,7 +1,8 @@
+import select
 import socket
 import time
 from random import randint
-from threading import Thread
+from threading import Thread, Event
 
 
 class Server:
@@ -52,15 +53,19 @@ class Server:
 
 
 
-    def wait_for_answer(self, client, res, times, i):
+    def wait_for_answer(self, reset_event, client, res, times, i):
         current = time.time()
         limit = current + 10
-        client.settimeout(10.0)
-        try:
-            res[i] = client.recv(1024)
-            times[i] = time.time() - current
-        except:
-            pass
+        client.setblocking(0)
+        while not reset_event.is_set():
+            try:
+                res[i] = client.recv(1024)
+            except:
+                pass
+            if time.time() > limit:
+                reset_event.set()
+            if res[i] != 767:
+                times[i] = time.time() - current
 
 
     def game_mode(self):
@@ -71,22 +76,26 @@ class Server:
             f"Player 1: {self.client1_name} \n" \
             f"Player 2: {self.client2_name} \n==\n" \
             "Please answer the following question as fast as you can:\n" \
-            f"How much is {num1} + {num2}?\n"
+            f"How much is {num1} + {num2}?"
 
         self.client1.send(bytes(msg, 'UTF-8'))
         self.client2.send(bytes(msg, 'UTF-8'))
 
         results = [767, 767]
         times = [10, 10]
+        reset_event = Event()
 
-        t1 = Thread(target=self.wait_for_answer, args=[self.client1, results, time, 0])
-        t2 = Thread(target=self.wait_for_answer, args=[self.client2, results, time, 1])
+        t1 = Thread(target=self.wait_for_answer, args=[reset_event, self.client1, results, times, 0])
+        t2 = Thread(target=self.wait_for_answer, args=[reset_event, self.client2, results, times, 1])
         t1.start()
         t2.start()
 
-        while t1.is_alive() and t2.is_alive():
-            time.sleep(0.3)
+        while not reset_event.is_set():
+            time.sleep(0.2)
 
+        print("over wait")
+        print(results)
+        print(times)
         end_msg = f"Game over!\nThe correct answer was {res}!\n"
 
         if(results[0] == 767 and results[1] == 767):
