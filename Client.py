@@ -43,18 +43,26 @@ class Client:
 
         self.tcp_socket.connect((self.ip,self.tcp_port))
         team_msg = bytes(self.name,'UTF-8')
-        self.tcp_socket.send((team_msg))
+        self.tcp_socket.send(team_msg)
 
     def game_mode(self):
-        msg = self.tcp_socket.recv(1024)
-        print(msg.decode('UTF-8'))
-        self.tcp_socket.send(msvcrt.getch())
+        welcome = self.tcp_socket.recv(1024)
+        print(welcome.decode('UTF-8'))
+        char = None
+        while char is None:
+            char = msvcrt.getch()
+        self.tcp_socket.send(char)
+
 
 
     def start(self):
         self.looking_for_server()
         self.connecting_to_server()
         self.game_mode()
+        msg = self.tcp_socket.recv(1024).decode('UTF-8')
+        print(msg)
+        self.tcp_socket.close()
+        print("Server disconnected, listening for offer requests...")
 
 if __name__ == "__main__":
     while True:
