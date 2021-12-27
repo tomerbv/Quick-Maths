@@ -6,15 +6,17 @@ from threading import Thread
 class Server:
     def __init__(self, tcp_port):
         self.looking_port = 13117
-        # self.tcp_port = tcp_port
+        self.tcp_port = tcp_port
 
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = bytes(0xabcddcba) + bytes(0x2) + tcp_port
+
+        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(
+            byteorder='big', length=1) + self.tcp_port.to_bytes(byteorder='big', length=2)
 
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.bind("", tcp_port)
+        self.tcp_socket.bind(("", self.tcp_port))
 
         self.client1 = None
         self.client1_name = None
@@ -23,11 +25,11 @@ class Server:
 
     def broadcast(self):
         while not self.players_ready():
-            self.udp_socket.sendto(self.msg, self.looking_port)
+            self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
 
     def players_ready(self):
-        return self.client1_addr is not None and self.client2 is not None
+        return self.client1 is not None and self.client2 is not None
 
     def waiting_for_clients(self):
         print("Server started, listening on IP address " + self.ip)
@@ -60,4 +62,4 @@ class Server:
 
 while True:
     server = Server(18121)
-    server.start_server()
+    server.start()
