@@ -22,6 +22,7 @@ class Client:
 
     def looking_for_server(self):
         while not self.server_found:
+
             print("Client started, listening for offer requests...")
             verifaction_tcp,adress = self.udp_socket.recv('UTF-8')
             recieved_cookie = hex(int(verifaction_tcp.hex()[:8],16))
@@ -32,6 +33,7 @@ class Client:
                 self.ip=adress[0]
             print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
             self.server_found=True
+
 
 
     def connecting_to_server(self):
