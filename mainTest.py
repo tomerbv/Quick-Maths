@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     client1 = Client()
     client2 = Client()
-    client3 = Client()
+
     tClient1 = Thread(target=client1.start_client, daemon=True)
     tClient2 = Thread(target=client2.start_client, daemon=True)
     # tClient3 = Thread(target=client3.start_client, daemon=True)

@@ -33,8 +33,8 @@ class Client:
             if(recieved_cookie == hex(self.magic_cookie) and int(recieved_type)==self.offer_message_type):
                 self.tcp_port = int(recieved_port,16)
                 self.ip = adress[0]
-                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
-                self.server_found = True
+            print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+            self.server_found = True
 
 
 
@@ -48,16 +48,18 @@ class Client:
     def game_mode(self):
         msg = self.tcp_socket.recv(1024)
         print(msg.decode('UTF-8'))
-        self.tcp_socket.send(msvcrt.getch())
+        self.tcp_socket.send(bytes("hi",'UTF-8'))
 
 
     def start(self):
         self.looking_for_server()
         self.connecting_to_server()
         self.game_mode()
+        self.tcp_socket.close()
+        print("Server disconnected, listening for offer requests...")
+
 
 if __name__ == "__main__":
-    while True:
       client = Client()
       client.start()
 

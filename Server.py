@@ -58,6 +58,8 @@ class Server:
         ans2 = self.client2.recv(1024)
         print(ans1.decode('UTF-8'))
         print(ans2.decode('UTF-8'))
+        self.tcp_socket.close()
+
 
     def start(self):
         self.waiting_for_clients()
