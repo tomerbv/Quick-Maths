@@ -20,6 +20,7 @@ class Client:
 
     def looking_for_server(self):
         while not self.server_found:
+
             msg = self.udp_socket.recv("utf-8")
 
 
