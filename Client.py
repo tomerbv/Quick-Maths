@@ -34,36 +34,44 @@ class Client:
             if(recieved_cookie == hex(self.magic_cookie) and int(recieved_type)==self.offer_message_type):
                 self.tcp_port = int(recieved_port,16)
                 self.ip = adress[0]
-                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
-                self.server_found = True
+            print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+            self.server_found = True
 
 
 
 
     def connecting_to_server(self):
         # print("Recieved offer from " + str(self.ip) + ", attempting to connect...to my tcp port" + str(self.tcp_port + '\n'))
+        try:
 
-        self.tcp_socket.connect((self.ip,self.tcp_port))
-        team_msg = bytes(self.name,'UTF-8')
-        self.tcp_socket.send(team_msg)
+            self.tcp_socket.connect((self.ip,self.tcp_port))
+            team_msg = bytes(self.name,'UTF-8')
+            self.tcp_socket.send(team_msg)
+        except:
+            print("unable to connect to servers tcp port")
+
 
     def game_mode(self):
-        welcome = self.tcp_socket.recv(1024)
-        print(welcome.decode('UTF-8'))
-        print("expecting char")
-        self.tcp_socket.setblocking(0)
-        msg = None
-        while not msvcrt.kbhit():
-            msg = self.expect_message()
-            if msg:
-                break
+        try:
 
-        if not msg:
-            char = msvcrt.getch()
-            print("got char")
-            self.tcp_socket.send(char)
-            while not msg:
+            welcome = self.tcp_socket.recv(1024)
+            print(welcome.decode('UTF-8'))
+            print("expecting char")
+            self.tcp_socket.setblocking(0)
+            msg = None
+            while not msvcrt.kbhit():
                 msg = self.expect_message()
+                if msg:
+                    break
+
+            if not msg:
+                char = msvcrt.getch()
+                print("got char")
+                self.tcp_socket.send(char)
+                while not msg:
+                    msg = self.expect_message()
+        except:
+            print("could not start the game mode after connectino with tcp server")
 
         return msg
 
@@ -80,8 +88,7 @@ class Client:
         self.connecting_to_server()
         msg = self.game_mode()
         print(msg.decode('UTF-8'))
-        self.tcp_socket.close()
-        self.udp_socket.close()
+
         print("Server disconnected, listening for offer requests...")
 
 
