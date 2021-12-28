@@ -4,7 +4,13 @@ import time
 
 
 class Client:
+
     def __init__(self):
+        """
+        in the constructor we initiate the Client class with the Udp port of 13117(given to us) and a TCP socket to connect to the Servers Tcp socket after
+        it will be given to us
+
+        """
         self.looking_port = 13117
 
         self.server_found = False;
@@ -23,6 +29,14 @@ class Client:
         self.offer_message_type = 0x2
 
     def looking_for_server(self):
+        """
+        this is the looking for server state:
+        in this function we are looking for a UDP brodacast.
+        after we find one we break the first part of the message to three parts: Message_cookie = we check that is it is the message right message cookie : 0xabcddcba
+                                                                                 offer_message_type = we check that is it is the right message type : 0x2
+                                                                                 tcp_port : this will be the port the Clients tcp socket will connect to from the Servers side
+        the second part of the message is the ip of the socket to connect to
+        """
         while True:
 
             verifaction_tcp, adress = self.udp_socket.recvfrom(1024)
@@ -37,6 +51,13 @@ class Client:
                 break
 
     def connecting_to_server(self):
+        """
+        this is the connecting to server state
+        we try to establish a connection with the TCP socket of the server. if it is established we send the server our team name.
+        then we receive a message from the server that welcomes us to the game and ask us the math question
+        :return: True if no problems occured
+                 Fales if a problem occured
+        """
         try:
             self.tcp_socket.connect((self.ip, self.tcp_port))
         except:
@@ -53,6 +74,11 @@ class Client:
             return False
 
     def game_mode(self):
+        """
+        this is the game mode state
+        in this situation
+        :return:
+        """
         current = time.time()
         self.tcp_socket.setblocking(0)
         msg = None

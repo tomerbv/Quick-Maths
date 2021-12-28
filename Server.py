@@ -43,18 +43,21 @@ class Server:
 
                     self.client1, address = self.tcp_socket.accept()
                     self.client1_name = self.client1.recv(1024).decode('UTF-8')
-                    print("connected 1")
+
                 except:
-                    pass
+
+                    self.client1=None
 
             elif self.client2 is None:
                 try:
 
                     self.client2, address = self.tcp_socket.accept()
                     self.client2_name = self.client2.recv(1024).decode('UTF-8')
-                    print("connected 2")
+
                 except:
-                    pass
+
+                    self.client2 = None
+
 
 
 
@@ -72,8 +75,15 @@ class Server:
         while not reset_event.is_set():
             try:
                 res[i] = client.recv(1024).decode('UTF-8')
-            except:
-                pass
+            except socket.error as msg:
+                if msg.errno==10054:
+                    raise Exception("client disconnected at the start of the game")
+                else:
+                    pass
+
+
+
+
             if time.time() > limit:
                 reset_event.set()
             if res[i] != 767:
@@ -129,17 +139,25 @@ class Server:
 
 
     def start(self):
-        self.waiting_for_clients()
-        print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
-        # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
-        time.sleep(3)
-        summary = self.game_mode()
-        self.client1.send(bytes(summary, 'UTF-8'))
-        self.client2.send(bytes(summary, 'UTF-8'))
-        self.tcp_socket.close()
-        print("Game over, sending out offer requests...")
+        while True:
 
+            self.waiting_for_clients()
+            print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
+            # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
+            time.sleep(3)
+            try:
 
-while True:
+                summary = self.game_mode()
+                self.client1.send(bytes(summary, 'UTF-8'))
+                self.client2.send(bytes(summary, 'UTF-8'))
+                self.tcp_socket.close()
+                print("Game over, sending out offer requests...")
+
+            except:
+                print("the game has been interupted due to one of the clients disconnectiong")
+                print("Game over, sending out offer requests...")
+            self.__init__(self.tcp_port)
+
+if __name__ == "__main__":
     server = Server(11111)
     server.start()
