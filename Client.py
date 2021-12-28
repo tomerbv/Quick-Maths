@@ -8,8 +8,8 @@ class Client:
         self.looking_port = 13117
 
         self.server_found = False;
-        self.tcp_port=None
-        self.ip=None
+        self.tcp_port = None
+        self.ip = None
 
         self.name = "TomOmer"
 
@@ -23,81 +23,85 @@ class Client:
         self.offer_message_type = 0x2
 
     def looking_for_server(self):
-        while not self.server_found:
+        while True:
 
-            print("Client started, listening for offer requests...")
             verifaction_tcp, adress = self.udp_socket.recvfrom(1024)
-            recieved_cookie = hex(int(verifaction_tcp.hex()[:8],16))
+            recieved_cookie = hex(int(verifaction_tcp.hex()[:8], 16))
             recieved_type = verifaction_tcp.hex()[9:10]
             recieved_port = verifaction_tcp.hex()[10:]
 
-            if(recieved_cookie == hex(self.magic_cookie) and int(recieved_type)==self.offer_message_type):
-                self.tcp_port = int(recieved_port,16)
+            if (recieved_cookie == hex(self.magic_cookie) and int(recieved_type) == self.offer_message_type):
+                self.tcp_port = int(recieved_port, 16)
                 self.ip = adress[0]
-            print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
-            self.server_found = True
-
-
-
+                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+                break
 
     def connecting_to_server(self):
-        # print("Recieved offer from " + str(self.ip) + ", attempting to connect...to my tcp port" + str(self.tcp_port + '\n'))
         try:
-
-            self.tcp_socket.connect((self.ip,self.tcp_port))
-            team_msg = bytes(self.name,'UTF-8')
-            self.tcp_socket.send(team_msg)
+            self.tcp_socket.connect((self.ip, self.tcp_port))
         except:
-            print("unable to connect to servers tcp port")
-
-
-    def game_mode(self):
+            print("Couldn't connect to server, listening for offer requests...")
+            return False
+        team_msg = bytes(self.name, 'UTF-8')
         try:
-
+            self.tcp_socket.send(team_msg)
             welcome = self.tcp_socket.recv(1024)
             print(welcome.decode('UTF-8'))
-            print("expecting char")
-            self.tcp_socket.setblocking(0)
-            msg = None
-            while not msvcrt.kbhit():
-                msg = self.expect_message()
-                if msg:
-                    break
-
-            if not msg:
-                char = msvcrt.getch()
-                print("got char")
-                self.tcp_socket.send(char)
-                while not msg:
-                    msg = self.expect_message()
+            return True
         except:
-            print("could not start the game mode after connectino with tcp server")
+            print("Couldn't connect to server, listening for offer requests...")
+            return False
 
+    def game_mode(self):
+        current = time.time()
+        self.tcp_socket.setblocking(0)
+        msg = None
+        while not msvcrt.kbhit():
+            msg = self.expect_message()
+            if msg:
+                break
+            #timeout in case the server has disconnected
+            if current + 11 <= time.time():
+                raise Exception("Server disconnected")
+
+        if not msg:
+            char = msvcrt.getch()
+            self.tcp_socket.send(char)
+            while not msg:
+                msg = self.expect_message()
+                if current + 11 <= time.time():
+                    raise Exception("Server disconnected")
         return msg
+
 
     def expect_message(self):
         msg = None
         try:
             msg = self.tcp_socket.recv(1024)
         except:
-            pass
+            time.sleep(0.1)
         return msg
 
-    def start(self):
-        self.looking_for_server()
-        self.connecting_to_server()
-        msg = self.game_mode()
-        print(msg.decode('UTF-8'))
+    def disconnected(self):
+        print("Disconnected from server, listening for offer requests...")
 
-        print("Server disconnected, listening for offer requests...")
+    def start(self):
+        print("Client started, listening for offer requests...")
+        while True:
+            self.looking_for_server()
+            if self.connecting_to_server():
+                try:
+                    msg = self.game_mode()
+                except:
+                    print("Server disconnected duo to error, listening for offer requests...")
+                else:
+                    print(msg.decode('UTF-8'))
+                    print("Server disconnected, listening for offer requests...")
+
+            self.__init__()
+
 
 
 if __name__ == "__main__":
-    while True:
-      client = Client()
-      client.start()
-
-
-
-
-
+    client = Client()
+    client.start()

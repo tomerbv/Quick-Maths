@@ -110,9 +110,6 @@ class Server:
         while not reset_event.is_set():
             time.sleep(0.2)
 
-        print("over wait")
-        print(results)
-        print(times)
         end_msg = f"Game over!\nThe correct answer was {res}!\n"
 
         if(results[0] == 767 and results[1] == 767):
@@ -134,6 +131,7 @@ class Server:
     def start(self):
         self.waiting_for_clients()
         print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
+        # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
         time.sleep(3)
         summary = self.game_mode()
         self.client1.send(bytes(summary, 'UTF-8'))
@@ -143,5 +141,5 @@ class Server:
 
 
 while True:
-    server = Server(18121)
+    server = Server(11111)
     server.start()
