@@ -12,6 +12,19 @@ class Server:
 
         :param tcp_port: the servers TCP port given to us
         """
+        self.CRED = '\033[91m'
+        self.CGREEN = '\033[32m'
+        self.YELLOW = '\033[33m'
+        self.BLUE = '\033[34m'
+        self.CBLINK = '\33[5m'
+        self.CREDBG = '\33[41m'
+        self.CGREENBG = '\33[42m'
+        self.CYELLOWBG = '\33[43m'
+        self.CBLUEBG = '\33[44m'
+        self.CEND = '\033[0m'
+
+
+
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
@@ -48,7 +61,7 @@ class Server:
         in this state  we start listening on the servers TCP socket, the UDP socket will send broadcast offers and find clients that will connect to our Tcp SOCKET that will open a socket for each client(as learned in the course)
         after connection the clients will send the Server their team names, then we are read to start the game
         """
-        print("Server started, listening on IP address " + self.ip)
+        print(self.BLUE + "Server started, listening on IP address " + self.ip + self.CEND)
         self.tcp_socket.listen()
         broad = Thread(target=self.broadcast)
         broad.start()
@@ -78,7 +91,7 @@ class Server:
 
 
 
-        print("2 players are ready, tcp server closed until end of game")
+
         broad.join()
 
 
@@ -123,17 +136,17 @@ class Server:
         num1 = randint(0,9)
         num2 = randint(0,9 - num1)
         res = num1 + num2
-        msg = "Welcome to Quick Maths.\n" \
+        msg = self.BLUE + "Welcome to Quick Maths.\n" \
             f"Player 1: {self.client1_name} \n" \
             f"Player 2: {self.client2_name} \n==\n" \
             "Please answer the following question as fast as you can:\n" \
-            f"How much is {num1} + {num2}?"
+            f"How much is {num1} + {num2}?" + self.CEND
         try:
 
             self.client1.send(bytes(msg, 'UTF-8'))
             self.client2.send(bytes(msg, 'UTF-8'))
         except:
-            raise Exception("could not send to players the welcome message")
+            raise Exception(self.CRED + "could not send to players the welcome message" + self.CEND)
 
 
         results = [767, 767]
@@ -148,29 +161,29 @@ class Server:
         while not reset_event.is_set():
             time.sleep(0.2)
 
-        end_msg = f"Game over!\nThe correct answer was {res}!\n"
+        end_msg = self.BLUE + f"Game over!\nThe correct answer was {res}!\n"
 
         if(results[0] == 767 and results[1] == 767):
             return end_msg + "Both of you are losers, next time don't sleep on your keyboard"
 
         elif(times[0] < times[1]):
             if(results[0] == res):
-                return end_msg + f"Congratulations to the winner: {self.client1_name}"
+                return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
             else:
-                return end_msg + f"Congratulations to the winner: {self.client2_name}"
+                return  end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
 
         elif (times[0] > times[1]):
             if(results[1] == res):
-                return end_msg + f"Congratulations to the winner: {self.client2_name}"
+                return  end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
             else:
-                return end_msg + f"Congratulations to the winner: {self.client1_name}"
+                return  end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
 
 
     def start(self):
         while True:
 
             self.waiting_for_clients()
-            print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
+            print(self.BLUE + f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect..."+ self.CEND)
             # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
             time.sleep(3)
             try:
@@ -179,11 +192,11 @@ class Server:
                 self.client1.send(bytes(summary, 'UTF-8'))
                 self.client2.send(bytes(summary, 'UTF-8'))
                 self.tcp_socket.close()
-                print("Game over, sending out offer requests...")
+                print(self.BLUE + "Game over, sending out offer requests..." + self.CEND)
 
             except:
-                print("the game has been interupted due to one of the clients disconnectiong")
-                print("Game over, sending out offer requests...")
+                print(self.CRED + "the game has been interupted due to one of the clients disconnectiong" + self.CEND )
+                print(self.CRED + "Game over, sending out offer requests..." + self.CEND)
             self.__init__(self.tcp_port)
 
 if __name__ == "__main__":

@@ -1,7 +1,10 @@
 import msvcrt
 import socket
 import time
+import os
 
+# System call
+os.system("")
 
 class Client:
 
@@ -11,6 +14,19 @@ class Client:
         it will be given to us
 
         """
+        self.CRED = '\033[91m'
+        self.CGREEN = '\033[32m'
+        self.YELLOW = '\033[33m'
+        self.BLUE = '\033[34m'
+        self.CBLINK ='\33[5m'
+        self.CREDBG    = '\33[41m'
+        self.CGREENBG  = '\33[42m'
+        self.CYELLOWBG = '\33[43m'
+        self.CBLUEBG   = '\33[44m'
+        self.CEND = '\033[0m'
+
+
+
         self.looking_port = 13117
 
         self.server_found = False;
@@ -47,7 +63,7 @@ class Client:
             if (recieved_cookie == hex(self.magic_cookie) and int(recieved_type) == self.offer_message_type):
                 self.tcp_port = int(recieved_port, 16)
                 self.ip = adress[0]
-                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+                print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
                 break
 
     def connecting_to_server(self):
@@ -61,7 +77,7 @@ class Client:
         try:
             self.tcp_socket.connect((self.ip, self.tcp_port))
         except:
-            print("Couldn't connect to server, listening for offer requests...")
+            print(self.CRED + "Couldn't connect to server, listening for offer requests..."+ self.CEND)
             return False
         team_msg = bytes(self.name, 'UTF-8')
         try:
@@ -70,7 +86,7 @@ class Client:
             print(welcome.decode('UTF-8'))
             return True
         except:
-            print("Couldn't connect to server, listening for offer requests...")
+            print(self.CRED + "Couldn't connect to server, listening for offer requests..." + self.CEND )
             return False
 
     def game_mode(self):
@@ -124,17 +140,17 @@ class Client:
         we re-inialize our class and look for a server again.
 
         """
-        print("Client started, listening for offer requests...")
+        print(self.BLUE + "Client started, listening for offer requests..." + self.CEND)
         while True:
             self.looking_for_server()
             if self.connecting_to_server():
                 try:
                     msg = self.game_mode()
                 except:
-                    print("Server disconnected duo to error, listening for offer requests...")
+                    print(self.CRED + "Server disconnected duo to error, listening for offer requests..." + + self.CEND)
                 else:
-                    print(msg.decode('UTF-8'))
-                    print("Server disconnected, listening for offer requests...")
+                    print(self.BLUE + msg.decode('UTF-8') + self.CEND)
+                    print(self.BLUE + "Server disconnected, listening for offer requests..." + self.CEND)
 
             self.__init__()
 
