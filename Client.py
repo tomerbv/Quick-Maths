@@ -1,7 +1,10 @@
 import msvcrt
 import socket
 import time
+import os
 
+# System call
+os.system("")
 
 class Client:
 
@@ -11,6 +14,19 @@ class Client:
         it will be given to us
 
         """
+        self.CRED = '\033[91m'
+        self.CGREEN = '\033[32m'
+        self.YELLOW = '\033[33m'
+        self.BLUE = '\033[34m'
+        self.CBLINK ='\33[5m'
+        self.CREDBG    = '\33[41m'
+        self.CGREENBG  = '\33[42m'
+        self.CYELLOWBG = '\33[43m'
+        self.CBLUEBG   = '\33[44m'
+        self.CEND = '\033[0m'
+
+
+
         self.looking_port = 13117
 
         self.server_found = False;
@@ -47,7 +63,7 @@ class Client:
             if (recieved_cookie == hex(self.magic_cookie) and int(recieved_type) == self.offer_message_type):
                 self.tcp_port = int(recieved_port, 16)
                 self.ip = adress[0]
-                print("Recieved offer from " + str(self.ip) + ", attempting to connect...\n")
+                print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
                 break
 
     def connecting_to_server(self):
@@ -61,7 +77,7 @@ class Client:
         try:
             self.tcp_socket.connect((self.ip, self.tcp_port))
         except:
-            print("Couldn't connect to server, listening for offer requests...")
+            print(self.CRED + "Couldn't connect to server, listening for offer requests..."+ self.CEND)
             return False
         team_msg = bytes(self.name, 'UTF-8')
         try:
@@ -70,14 +86,17 @@ class Client:
             print(welcome.decode('UTF-8'))
             return True
         except:
-            print("Couldn't connect to server, listening for offer requests...")
+            print(self.CRED + "Couldn't connect to server, listening for offer requests..." + self.CEND )
             return False
 
     def game_mode(self):
         """
         this is the game mode state
-        in this situation
-        :return:
+        in this situation we can either recieve the a summary message if the other player already typed a solution before us or we recieved a message after we typed in a solution
+        we check both situations and handle them, first we check if we entered a key , if we havent and 10 seconds passed, this means there was a problem with the server because of the
+        format we know.
+        if we have pressed a key and then we send this to the server and if we dont get an answer in 10 secconds we know there is a problem with a server because of the format
+        :return: the message
         """
         current = time.time()
         self.tcp_socket.setblocking(0)
@@ -101,6 +120,10 @@ class Client:
 
 
     def expect_message(self):
+        """
+        function to try to recieve the message from the server
+        :return:
+        """
         msg = None
         try:
             msg = self.tcp_socket.recv(1024)
@@ -108,21 +131,26 @@ class Client:
             time.sleep(0.1)
         return msg
 
-    def disconnected(self):
-        print("Disconnected from server, listening for offer requests...")
+
 
     def start(self):
-        print("Client started, listening for offer requests...")
+        """
+        this function puts everything together
+        first we look for a server to connect to , if we found one and the connection was established we play the game,if there was any problem during the game we just print the the disconnection and
+        we re-inialize our class and look for a server again.
+
+        """
+        print(self.BLUE + "Client started, listening for offer requests..." + self.CEND)
         while True:
             self.looking_for_server()
             if self.connecting_to_server():
                 try:
                     msg = self.game_mode()
                 except:
-                    print("Server disconnected duo to error, listening for offer requests...")
+                    print(self.CRED + "Server disconnected duo to error, listening for offer requests..." + + self.CEND)
                 else:
-                    print(msg.decode('UTF-8'))
-                    print("Server disconnected, listening for offer requests...")
+                    print(self.BLUE + msg.decode('UTF-8') + self.CEND)
+                    print(self.BLUE + "Server disconnected, listening for offer requests..." + self.CEND)
 
             self.__init__()
 
