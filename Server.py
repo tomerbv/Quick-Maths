@@ -7,6 +7,11 @@ from threading import Thread, Event
 
 class Server:
     def __init__(self, tcp_port):
+        """
+        in the constructor for the Server we a UDP and TCP socket to connect to clients. this server can only be connected to two clients for the game.
+
+        :param tcp_port: the servers TCP port given to us
+        """
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
@@ -23,15 +28,26 @@ class Server:
         self.client2_name = None
 
     def broadcast(self):
+        """
+        we broadcast offer messages from our UDP socket untill we have to TCP connections
+        """
         while not self.players_ready():
             self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
 
 
     def players_ready(self):
+        """
+
+        :return: true if we have 2 connections to clients
+        """
         return self.client1 is not None and self.client2 is not None
 
     def waiting_for_clients(self):
+        """
+        in this state  we start listening on the servers TCP socket, the UDP socket will send broadcast offers and find clients that will connect to our Tcp SOCKET that will open a socket for each client(as learned in the course)
+        after connection the clients will send the Server their team names, then we are read to start the game
+        """
         print("Server started, listening on IP address " + self.ip)
         self.tcp_socket.listen()
         broad = Thread(target=self.broadcast)
@@ -69,6 +85,14 @@ class Server:
 
 
     def wait_for_answer(self, reset_event, client, res, times, i):
+        """
+
+        :param reset_event:
+        :param client:
+        :param res:
+        :param times:
+        :param i:
+        """
         current = time.time()
         limit = current + 10
         client.setblocking(0)
@@ -92,6 +116,10 @@ class Server:
 
 
     def game_mode(self):
+        """
+        we start the game and send the clients the question, the we create a Thread for each client
+        :return:
+        """
         num1 = randint(0,9)
         num2 = randint(0,9 - num1)
         res = num1 + num2

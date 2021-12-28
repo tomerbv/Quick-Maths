@@ -76,8 +76,11 @@ class Client:
     def game_mode(self):
         """
         this is the game mode state
-        in this situation
-        :return:
+        in this situation we can either recieve the a summary message if the other player already typed a solution before us or we recieved a message after we typed in a solution
+        we check both situations and handle them, first we check if we entered a key , if we havent and 10 seconds passed, this means there was a problem with the server because of the
+        format we know.
+        if we have pressed a key and then we send this to the server and if we dont get an answer in 10 secconds we know there is a problem with a server because of the format
+        :return: the message
         """
         current = time.time()
         self.tcp_socket.setblocking(0)
@@ -101,6 +104,10 @@ class Client:
 
 
     def expect_message(self):
+        """
+        function to try to recieve the message from the server
+        :return:
+        """
         msg = None
         try:
             msg = self.tcp_socket.recv(1024)
@@ -108,10 +115,15 @@ class Client:
             time.sleep(0.1)
         return msg
 
-    def disconnected(self):
-        print("Disconnected from server, listening for offer requests...")
+
 
     def start(self):
+        """
+        this function puts everything together
+        first we look for a server to connect to , if we found one and the connection was established we play the game,if there was any problem during the game we just print the the disconnection and
+        we re-inialize our class and look for a server again.
+
+        """
         print("Client started, listening for offer requests...")
         while True:
             self.looking_for_server()
