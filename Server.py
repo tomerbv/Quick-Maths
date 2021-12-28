@@ -39,15 +39,30 @@ class Server:
         self.tcp_socket.listen(2)
         while not self.players_ready():
             if self.client1 is None:
-                self.client1, address = self.tcp_socket.accept()
-                self.client1_name = self.client1.recv(1024).decode('UTF-8')
-                print("connected 1")
+                try:
+
+                    self.client1, address = self.tcp_socket.accept()
+                    self.client1_name = self.client1.recv(1024).decode('UTF-8')
+
+                except:
+
+                    self.client1=None
 
             elif self.client2 is None:
-                self.client2, address = self.tcp_socket.accept()
-                self.client2_name = self.client2.recv(1024).decode('UTF-8')
-                print("connected 2")
+                try:
 
+                    self.client2, address = self.tcp_socket.accept()
+                    self.client2_name = self.client2.recv(1024).decode('UTF-8')
+
+                except:
+
+                    self.client2 = None
+
+
+
+
+
+        print("2 players are ready, tcp server closed until end of game")
         broad.join()
 
 
@@ -60,8 +75,15 @@ class Server:
         while not reset_event.is_set():
             try:
                 res[i] = client.recv(1024).decode('UTF-8')
-            except:
-                pass
+            except socket.error as msg:
+                if msg.errno==10054:
+                    raise Exception("client disconnected at the start of the game")
+                else:
+                    pass
+
+
+
+
             if time.time() > limit:
                 reset_event.set()
             if res[i] != 767:
@@ -78,9 +100,13 @@ class Server:
             f"Player 2: {self.client2_name} \n==\n" \
             "Please answer the following question as fast as you can:\n" \
             f"How much is {num1} + {num2}?"
+        try:
 
-        self.client1.send(bytes(msg, 'UTF-8'))
-        self.client2.send(bytes(msg, 'UTF-8'))
+            self.client1.send(bytes(msg, 'UTF-8'))
+            self.client2.send(bytes(msg, 'UTF-8'))
+        except:
+            raise Exception("could not send to players the welcome message")
+
 
         results = [767, 767]
         times = [10, 10]
@@ -113,17 +139,25 @@ class Server:
 
 
     def start(self):
-        self.waiting_for_clients()
-        print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
-        # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
-        time.sleep(3)
-        summary = self.game_mode()
-        self.client1.send(bytes(summary, 'UTF-8'))
-        self.client2.send(bytes(summary, 'UTF-8'))
-        self.tcp_socket.close()
-        print("Game over, sending out offer requests...")
+        while True:
 
+            self.waiting_for_clients()
+            print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
+            # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
+            time.sleep(3)
+            try:
 
-while True:
+                summary = self.game_mode()
+                self.client1.send(bytes(summary, 'UTF-8'))
+                self.client2.send(bytes(summary, 'UTF-8'))
+                self.tcp_socket.close()
+                print("Game over, sending out offer requests...")
+
+            except:
+                print("the game has been interupted due to one of the clients disconnectiong")
+                print("Game over, sending out offer requests...")
+            self.__init__(self.tcp_port)
+
+if __name__ == "__main__":
     server = Server(11111)
     server.start()
