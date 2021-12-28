@@ -59,13 +59,14 @@ class Server:
         client.setblocking(0)
         while not reset_event.is_set():
             try:
-                res[i] = client.recv(1024)
+                res[i] = client.recv(1024).decode('UTF-8')
             except:
                 pass
             if time.time() > limit:
                 reset_event.set()
             if res[i] != 767:
                 times[i] = time.time() - current
+                reset_event.set()
 
 
     def game_mode(self):

@@ -39,6 +39,7 @@ class Client:
 
 
 
+
     def connecting_to_server(self):
         # print("Recieved offer from " + str(self.ip) + ", attempting to connect...to my tcp port" + str(self.tcp_port + '\n'))
 
@@ -49,25 +50,40 @@ class Client:
     def game_mode(self):
         welcome = self.tcp_socket.recv(1024)
         print(welcome.decode('UTF-8'))
-        char = None
-        # while char is None:
         print("expecting char")
-        char = msvcrt.getch()
-        print("sent char")
-        self.tcp_socket.send(char)
+        self.tcp_socket.setblocking(0)
+        msg = None
+        while not msvcrt.kbhit():
+            msg = self.expect_message()
+            if msg:
+                break
 
+        if not msg:
+            char = msvcrt.getch()
+            print("got char")
+            self.tcp_socket.send(char)
+            while not msg:
+                msg = self.expect_message()
 
+        return msg
+
+    def expect_message(self):
+        msg = None
+        try:
+            msg = self.tcp_socket.recv(1024)
+        except:
+            pass
+        return msg
 
     def start(self):
         self.looking_for_server()
         self.connecting_to_server()
-        self.game_mode()
-        time.sleep(1)
-        print("waiting for final message")
-        msg = self.tcp_socket.recv(1024)
+        msg = self.game_mode()
         print(msg.decode('UTF-8'))
         self.tcp_socket.close()
+        self.udp_socket.close()
         print("Server disconnected, listening for offer requests...")
+
 
 if __name__ == "__main__":
     while True:
