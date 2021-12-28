@@ -25,11 +25,9 @@ class Client:
         self.CBLUEBG   = '\33[44m'
         self.CEND = '\033[0m'
 
-
-
         self.looking_port = 13117
 
-        self.server_found = False;
+        self.server_found = False
         self.tcp_port = None
         self.ip = None
 
@@ -43,6 +41,7 @@ class Client:
 
         self.magic_cookie = 0xabcddcba
         self.offer_message_type = 0x2
+
 
     def looking_for_server(self):
         """
@@ -65,6 +64,7 @@ class Client:
                 self.ip = adress[0]
                 print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
                 break
+
 
     def connecting_to_server(self):
         """
@@ -89,6 +89,7 @@ class Client:
             print(self.CRED + "Couldn't connect to server, listening for offer requests..." + self.CEND )
             return False
 
+
     def game_mode(self):
         """
         this is the game mode state
@@ -98,6 +99,8 @@ class Client:
         if we have pressed a key and then we send this to the server and if we dont get an answer in 10 secconds we know there is a problem with a server because of the format
         :return: the message
         """
+        while msvcrt.kbhit():
+            msvcrt.getch()
         current = time.time()
         self.tcp_socket.setblocking(0)
         msg = None
@@ -132,7 +135,6 @@ class Client:
         return msg
 
 
-
     def start(self):
         """
         this function puts everything together
@@ -147,13 +149,11 @@ class Client:
                 try:
                     msg = self.game_mode()
                 except:
-                    print(self.CRED + "Server disconnected duo to error, listening for offer requests..." + + self.CEND)
+                    print(self.CRED + "Server disconnected duo to error, listening for offer requests..." + self.CEND)
                 else:
                     print(self.BLUE + msg.decode('UTF-8') + self.CEND)
                     print(self.BLUE + "Server disconnected, listening for offer requests..." + self.CEND)
-
             self.__init__()
-
 
 
 if __name__ == "__main__":

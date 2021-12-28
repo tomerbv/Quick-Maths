@@ -1,12 +1,12 @@
-import select
 import socket
 import time
 from random import randint
 from threading import Thread, Event
+import scapy.all as scapy
 
 
 class Server:
-    def __init__(self, tcp_port):
+    def __init__(self, tcp_port, test_network=False):
         """
         in the constructor for the Server we a UDP and TCP socket to connect to clients. this server can only be connected to two clients for the game.
 
@@ -23,7 +23,10 @@ class Server:
         self.CBLUEBG = '\33[44m'
         self.CEND = '\033[0m'
 
-
+        if test_network:
+            self.network = 'eth2'
+        else:
+            self.network = 'eth1'
 
         self.looking_port = 13117
         self.tcp_port = tcp_port
@@ -31,9 +34,11 @@ class Server:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big', length=1) + tcp_port.to_bytes(byteorder='big', length=2)
+        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big',
+                                                                                 length=1) + tcp_port.to_bytes(
+            byteorder='big', length=2)
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.bind(("" , tcp_port))
+        self.tcp_socket.bind(("", tcp_port))
 
         self.client1 = None
         self.client1_name = None
@@ -42,17 +47,18 @@ class Server:
 
     def broadcast(self):
         """
-        we broadcast offer messages from our UDP socket untill we have to TCP connections
+        we broadcast offer messages from our UDP socket until we have two TCP connections
         """
+        # address = scapy.get_if_addr(self.network)
         while not self.players_ready():
+            # TODO: change network ip
+            # '255.255.255.255'
             self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
 
-
     def players_ready(self):
         """
-
-        :return: true if we have 2 connections to clients
+        :return: true if we have 2 connections and two clients
         """
         return self.client1 is not None and self.client2 is not None
 
@@ -69,42 +75,28 @@ class Server:
         while not self.players_ready():
             if self.client1 is None:
                 try:
-
                     self.client1, address = self.tcp_socket.accept()
                     self.client1_name = self.client1.recv(1024).decode('UTF-8')
-
                 except:
-
-                    self.client1=None
+                    self.client1 = None
 
             elif self.client2 is None:
                 try:
-
                     self.client2, address = self.tcp_socket.accept()
                     self.client2_name = self.client2.recv(1024).decode('UTF-8')
-
                 except:
-
                     self.client2 = None
-
-
-
-
-
 
         broad.join()
 
 
-
-
     def wait_for_answer(self, reset_event, client, res, times, i):
         """
-
-        :param reset_event:
-        :param client:
-        :param res:
-        :param times:
-        :param i:
+        :param reset_event: an Event instance that acts as the communication between the different threads
+        :param client: the specific client for which the tread waits for an answer
+        :param res: an array of results that the results are kept on by each thread
+        :param times: an array of time measurements that the time is kept on by each thread
+        :param i: the index of the client to access the arrays above
         """
         current = time.time()
         limit = current + 10
@@ -113,13 +105,10 @@ class Server:
             try:
                 res[i] = client.recv(1024).decode('UTF-8')
             except socket.error as msg:
-                if msg.errno==10054:
+                if msg.errno == 10054:
                     raise Exception("client disconnected at the start of the game")
                 else:
                     pass
-
-
-
 
             if time.time() > limit:
                 reset_event.set()
@@ -130,24 +119,27 @@ class Server:
 
     def game_mode(self):
         """
-        we start the game and send the clients the question, the we create a Thread for each client
-        :return:
+        the game contains 3 stages:
+        1. randomizing the question parameters and forming the text that will be sent to each client accordingly
+        2. creating two threads to listen to each client by using wait_for_answer method, once both threads are
+         finished duo to a received answer by one of the clients (that will terminate the other's thread as well)
+         or duo to a timeout, the game wil proceed to the third part
+        3. the game will decide the winner (or draw in case of a timeout) then it will construct a message accordingly
+        :return: the constructed game result message
         """
-        num1 = randint(0,9)
-        num2 = randint(0,9 - num1)
+        num1 = randint(0, 9)
+        num2 = randint(0, 9 - num1)
         res = num1 + num2
         msg = self.BLUE + "Welcome to Quick Maths.\n" \
-            f"Player 1: {self.client1_name} \n" \
-            f"Player 2: {self.client2_name} \n==\n" \
-            "Please answer the following question as fast as you can:\n" \
-            f"How much is {num1} + {num2}?" + self.CEND
+                          f"Player 1: {self.client1_name} \n" \
+                          f"Player 2: {self.client2_name} \n==\n" \
+                          "Please answer the following question as fast as you can:\n" \
+                          f"How much is {num1} + {num2}?" + self.CEND
         try:
-
             self.client1.send(bytes(msg, 'UTF-8'))
             self.client2.send(bytes(msg, 'UTF-8'))
         except:
             raise Exception(self.CRED + "could not send to players the welcome message" + self.CEND)
-
 
         results = [767, 767]
         times = [10, 10]
@@ -163,31 +155,36 @@ class Server:
 
         end_msg = self.BLUE + f"Game over!\nThe correct answer was {res}!\n"
 
-        if(results[0] == 767 and results[1] == 767):
+        if (results[0] == 767 and results[1] == 767):
             return end_msg + "Both of you are losers, next time don't sleep on your keyboard"
 
-        elif(times[0] < times[1]):
-            if(results[0] == res):
+        elif (times[0] < times[1]):
+            if (results[0] == res):
                 return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
             else:
-                return  end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
+                return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
 
         elif (times[0] > times[1]):
-            if(results[1] == res):
-                return  end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
+            if (results[1] == res):
+                return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
             else:
-                return  end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
+                return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
 
 
     def start(self):
+        """
+        the servers flow endlessly waits for clients to initiate connection, once a connection is made it proceeds to
+        the game itself. when the game is done or an error has occurred the server prints and sends the appropriate
+        messages and restarts its own fields.
+        """
         while True:
 
             self.waiting_for_clients()
-            print(self.BLUE + f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect..."+ self.CEND)
+            print(
+                self.BLUE + f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect..." + self.CEND)
             # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
             time.sleep(3)
             try:
-
                 summary = self.game_mode()
                 self.client1.send(bytes(summary, 'UTF-8'))
                 self.client2.send(bytes(summary, 'UTF-8'))
@@ -195,10 +192,11 @@ class Server:
                 print(self.BLUE + "Game over, sending out offer requests..." + self.CEND)
 
             except:
-                print(self.CRED + "the game has been interupted due to one of the clients disconnectiong" + self.CEND )
+                print(self.CRED + "the game has been interrupted due to one of the clients disconnecting" + self.CEND)
                 print(self.CRED + "Game over, sending out offer requests..." + self.CEND)
             self.__init__(self.tcp_port)
 
+
 if __name__ == "__main__":
-    server = Server(11111)
+    server = Server(17671)
     server.start()
