@@ -108,7 +108,7 @@ class Server:
             try:
                 res[i] = client.recv(1024).decode('UTF-8')
             except socket.error as msg:
-                    pass
+                pass
 
             if time.time() > limit:
                 reset_event.set()
