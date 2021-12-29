@@ -28,6 +28,8 @@ class Server:
         else:
             self.network = 'eth1'
 
+
+
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
@@ -49,7 +51,7 @@ class Server:
         """
         we broadcast offer messages from our UDP socket until we have two TCP connections
         """
-        # address = scapy.get_if_addr(self.network)
+        #address = scapy.get_if_addr(self.network)
         while not self.players_ready():
             # TODO: change network ip
             # '255.255.255.255'
@@ -118,6 +120,7 @@ class Server:
 
 
     def game_mode(self):
+
         """
         the game contains 3 stages:
         1. randomizing the question parameters and forming the text that will be sent to each client accordingly
@@ -127,6 +130,7 @@ class Server:
         3. the game will decide the winner (or draw in case of a timeout) then it will construct a message accordingly
         :return: the constructed game result message
         """
+
         num1 = randint(0, 9)
         num2 = randint(0, 9 - num1)
         res = num1 + num2
@@ -159,13 +163,14 @@ class Server:
             return end_msg + "Both of you are losers, next time don't sleep on your keyboard"
 
         elif (times[0] < times[1]):
-            if (results[0] == res):
+            if (int(results[0]) == res):
                 return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
+
             else:
                 return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
 
         elif (times[0] > times[1]):
-            if (results[1] == res):
+            if (int(results[1]) == res):
                 return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
             else:
                 return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
@@ -177,6 +182,7 @@ class Server:
         the game itself. when the game is done or an error has occurred the server prints and sends the appropriate
         messages and restarts its own fields.
         """
+
         while True:
 
             self.waiting_for_clients()
@@ -191,12 +197,14 @@ class Server:
                 self.tcp_socket.close()
                 print(self.BLUE + "Game over, sending out offer requests..." + self.CEND)
 
+
             except:
                 print(self.CRED + "the game has been interrupted due to one of the clients disconnecting" + self.CEND)
                 print(self.CRED + "Game over, sending out offer requests..." + self.CEND)
             self.__init__(self.tcp_port)
 
 
+
 if __name__ == "__main__":
-    server = Server(17671)
+    server = Server(17674)
     server.start()

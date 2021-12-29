@@ -61,6 +61,7 @@ class Client:
 
             if (recieved_cookie == hex(self.magic_cookie) and int(recieved_type) == self.offer_message_type):
                 self.tcp_port = int(recieved_port, 16)
+
                 self.ip = adress[0]
                 print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
                 break
