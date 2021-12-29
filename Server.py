@@ -1,9 +1,10 @@
+import os
 import socket
 import time
 from random import randint
 from threading import Thread, Event
 import scapy.all as scapy
-
+import platform
 
 class Server:
     time_record = None
@@ -25,22 +26,23 @@ class Server:
         self.CBLUEBG = '\33[44m'
         self.CEND = '\033[0m'
 
-        if test_network:
-            self.network = 'eth2'
+        if platform.system() == 'Linux':
+            if test_network:
+                self.network = scapy.get_if_addr('eth2')
+            else:
+                self.network = scapy.get_if_addr('eth1')
         else:
-            self.network = 'eth1'
-
+            self.network = ''
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big',
-                                                                                 length=1) + tcp_port.to_bytes(
-            byteorder='big', length=2)
+        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big', length=1) + tcp_port.to_bytes(byteorder='big', length=2)
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.bind(("", tcp_port))
+
+        self.tcp_socket.bind((self.network, tcp_port))
 
         self.client1 = None
         self.client1_name = None
@@ -54,7 +56,7 @@ class Server:
         # address = scapy.get_if_addr(self.network)
         while not self.players_ready():
             # TODO: change network ip
-            # '255.255.255.255'
+            # self.network
             self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
 
