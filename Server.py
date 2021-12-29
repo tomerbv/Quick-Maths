@@ -1,11 +1,14 @@
+import os
 import socket
 import time
 from random import randint
 from threading import Thread, Event
 import scapy.all as scapy
-
+import platform
 
 class Server:
+    time_record = None
+
     def __init__(self, tcp_port, test_network=False):
         """
         in the constructor for the Server we a UDP and TCP socket to connect to clients. this server can only be connected to two clients for the game.
@@ -13,7 +16,7 @@ class Server:
         :param tcp_port: the servers TCP port given to us
         """
         self.CRED = '\033[91m'
-        self.CGREEN = '\033[32m'
+        self.GREEN = '\033[32m'
         self.YELLOW = '\033[33m'
         self.BLUE = '\033[34m'
         self.CBLINK = '\33[5m'
@@ -23,24 +26,23 @@ class Server:
         self.CBLUEBG = '\33[44m'
         self.CEND = '\033[0m'
 
-        if test_network:
-            self.network = 'eth2'
+        if platform.system() == 'Linux':
+            if test_network:
+                self.network = scapy.get_if_addr('eth2')
+            else:
+                self.network = scapy.get_if_addr('eth1')
         else:
-            self.network = 'eth1'
-
-
-
+            self.network = ''
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big',
-                                                                                 length=1) + tcp_port.to_bytes(
-            byteorder='big', length=2)
+        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big', length=1) + tcp_port.to_bytes(byteorder='big', length=2)
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.bind(("", tcp_port))
+
+        self.tcp_socket.bind((self.network, tcp_port))
 
         self.client1 = None
         self.client1_name = None
@@ -51,10 +53,10 @@ class Server:
         """
         we broadcast offer messages from our UDP socket until we have two TCP connections
         """
-        #address = scapy.get_if_addr(self.network)
+        # address = scapy.get_if_addr(self.network)
         while not self.players_ready():
             # TODO: change network ip
-            # '255.255.255.255'
+            # self.network
             self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
             time.sleep(1)
 
@@ -91,7 +93,6 @@ class Server:
 
         broad.join()
 
-
     def wait_for_answer(self, reset_event, client, res, times, i):
         """
         :param reset_event: an Event instance that acts as the communication between the different threads
@@ -118,9 +119,7 @@ class Server:
                 times[i] = time.time() - current
                 reset_event.set()
 
-
     def game_mode(self):
-
         """
         the game contains 3 stages:
         1. randomizing the question parameters and forming the text that will be sent to each client accordingly
@@ -130,15 +129,14 @@ class Server:
         3. the game will decide the winner (or draw in case of a timeout) then it will construct a message accordingly
         :return: the constructed game result message
         """
-
         num1 = randint(0, 9)
         num2 = randint(0, 9 - num1)
-        res = num1 + num2
-        msg = self.BLUE + "Welcome to Quick Maths.\n" \
-                          f"Player 1: {self.client1_name} \n" \
-                          f"Player 2: {self.client2_name} \n==\n" \
-                          "Please answer the following question as fast as you can:\n" \
-                          f"How much is {num1} + {num2}?" + self.CEND
+        res = str(num1 + num2)
+        msg = f"{self.BLUE}Welcome to Quick Maths.{self.CEND}\n" \
+              f"{self.GREEN}Player 1: {self.client1_name}{self.CEND}\n" \
+              f"{self.YELLOW}Player 2: {self.client2_name}\n{self.CEND}" \
+              f"{self.BLUE}==\nPlease answer the following question as fast as you can:\n" \
+              f"How much is {num1} + {num2}?{self.CEND}"
         try:
             self.client1.send(bytes(msg, 'UTF-8'))
             self.client2.send(bytes(msg, 'UTF-8'))
@@ -157,24 +155,40 @@ class Server:
         while not reset_event.is_set():
             time.sleep(0.2)
 
-        end_msg = self.BLUE + f"Game over!\nThe correct answer was {res}!\n"
+        end_msg = f"{self.CREDBG}Game over!\nThe correct answer was {res}!{self.CEND}\n"
 
         if (results[0] == 767 and results[1] == 767):
-            return end_msg + "Both of you are losers, next time don't sleep on your keyboard"
+            return end_msg + f"{self.CBLUEBG}Congratulations! both of you are losers, next time don't sleep on your keyboard{self.CEND}"
 
-        elif (times[0] < times[1]):
-            if (int(results[0]) == res):
-                return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
 
+        elif times[0] < times[1]:
+            if results[0] == res:
+                end_msg += f"{self.CBLUEBG}Congratulations to the winner: {self.client1_name}{self.CEND}"
+                if self.check_time_record(times[0]):
+                    end_msg += f"\n{self.YELLOW}Congratulations {self.client1_name} you broke the time record!\nThe record you set is: {self.time_record}{self.CEND}"
+                return end_msg
             else:
-                return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
+                return end_msg + f"{self.CBLUEBG}Congratulations to the winner: {self.client2_name}{self.CEND}"
 
-        elif (times[0] > times[1]):
-            if (int(results[1]) == res):
-                return end_msg + f"Congratulations to the winner: {self.client2_name}" + self.CEND
+        elif times[0] > times[1]:
+            if results[1] == res:
+                end_msg += f"{self.CBLUEBG}Congratulations to the winner: {self.client2_name}{self.CEND}"
+                if self.check_time_record(times[1]):
+                    end_msg += f"\n{self.YELLOW}Congratulations {self.client2_name} you broke the time record!\nThe record you set is: {self.time_record}{self.CEND}"
+                return end_msg
             else:
-                return end_msg + f"Congratulations to the winner: {self.client1_name}" + self.CEND
+                return end_msg + f"{self.CBLUEBG}Congratulations to the winner: {self.client1_name}{self.CEND}"
 
+    def check_time_record(self, time):
+        print(time)
+        if not self.time_record:
+            self.time_record = time
+            return True
+        elif time < self.time_record:
+            self.time_record = time
+            return True
+        else:
+            return False
 
     def start(self):
         """
@@ -182,21 +196,18 @@ class Server:
         the game itself. when the game is done or an error has occurred the server prints and sends the appropriate
         messages and restarts its own fields.
         """
-
         while True:
 
             self.waiting_for_clients()
-            print(
-                self.BLUE + f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect..." + self.CEND)
+            print(f"Received offer from {self.client1_name} and {self.client2_name}, attempting to connect...")
             # TODO: change to 10 seconds, game starts 10 seconds after both players have connected.
-            time.sleep(3)
+            time.sleep(0.1)
             try:
                 summary = self.game_mode()
                 self.client1.send(bytes(summary, 'UTF-8'))
                 self.client2.send(bytes(summary, 'UTF-8'))
                 self.tcp_socket.close()
-                print(self.BLUE + "Game over, sending out offer requests..." + self.CEND)
-
+                print("Game over, sending out offer requests...")
 
             except:
                 print(self.CRED + "the game has been interrupted due to one of the clients disconnecting" + self.CEND)
@@ -204,7 +215,6 @@ class Server:
             self.__init__(self.tcp_port)
 
 
-
 if __name__ == "__main__":
-    server = Server(17674)
+    server = Server(17671)
     server.start()

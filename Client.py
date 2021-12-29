@@ -31,7 +31,7 @@ class Client:
         self.tcp_port = None
         self.ip = None
 
-        self.name = "TomOmer"
+        self.name = "Mr. Anderson"
 
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -130,7 +130,7 @@ class Client:
         """
         msg = None
         try:
-            msg = self.tcp_socket.recv(1024)
+            msg = self.tcp_socket.recv(4096)
         except:
             time.sleep(0.1)
         return msg
