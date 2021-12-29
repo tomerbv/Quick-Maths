@@ -5,6 +5,7 @@ from random import randint
 from threading import Thread, Event
 import scapy.all as scapy
 import platform
+import struct
 
 class Server:
     time_record = None
@@ -39,9 +40,8 @@ class Server:
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = 0xabcddcba.to_bytes(byteorder='big', length=4) + 0x2.to_bytes(byteorder='big', length=1) + tcp_port.to_bytes(byteorder='big', length=2)
+        self.msg = struct.pack(">IbH",0xabcddcba,0x2,self.tcp_port)
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         self.tcp_socket.bind((self.network, tcp_port))
 
         self.client1 = None

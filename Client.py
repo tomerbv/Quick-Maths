@@ -1,5 +1,6 @@
 import msvcrt
 import socket
+import struct
 import time
 import os
 
@@ -55,12 +56,9 @@ class Client:
         while True:
 
             verifaction_tcp, adress = self.udp_socket.recvfrom(1024)
-            recieved_cookie = hex(int(verifaction_tcp.hex()[:8], 16))
-            recieved_type = verifaction_tcp.hex()[9:10]
-            recieved_port = verifaction_tcp.hex()[10:]
-
-            if (recieved_cookie == hex(self.magic_cookie) and int(recieved_type) == self.offer_message_type):
-                self.tcp_port = int(recieved_port, 16)
+            recieved_cookie,recieved_type,recieved_port = struct.unpack(">IbH",verifaction_tcp)
+            if (recieved_cookie == self.magic_cookie and recieved_type == self.offer_message_type):
+                self.tcp_port = recieved_port
 
                 self.ip = adress[0]
                 print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
