@@ -108,9 +108,6 @@ class Server:
             try:
                 res[i] = client.recv(1024).decode('UTF-8')
             except socket.error as msg:
-                if msg.errno == 10054:
-                    raise Exception("client disconnected at the start of the game")
-                else:
                     pass
 
             if time.time() > limit:
@@ -146,11 +143,15 @@ class Server:
         results = [767, 767]
         times = [10, 10]
         reset_event = Event()
+        try:
+            t1 = Thread(target=self.wait_for_answer, args=[reset_event, self.client1, results, times, 0])
+            t2 = Thread(target=self.wait_for_answer, args=[reset_event, self.client2, results, times, 1])
+            t1.start()
+            t2.start()
+        except:
+            pass
 
-        t1 = Thread(target=self.wait_for_answer, args=[reset_event, self.client1, results, times, 0])
-        t2 = Thread(target=self.wait_for_answer, args=[reset_event, self.client2, results, times, 1])
-        t1.start()
-        t2.start()
+
 
         while not reset_event.is_set():
             time.sleep(0.2)
