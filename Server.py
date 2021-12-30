@@ -37,27 +37,32 @@ class Server:
         self.looking_port = 13117
         self.tcp_port = tcp_port
 
+        self.address = ".".join(self.network.split('.')[:2]) + '.255.255'
+        print(self.address)
+
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.msg = struct.pack(">IbH",0xabcddcba,0x2,self.tcp_port)
+        self.msg = struct.pack("IbH",0xabcddcba,0x2,self.tcp_port)
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcp_socket.bind((self.network, tcp_port))
+        self.tcp_socket.bind((self.ip, tcp_port))
 
         self.client1 = None
         self.client1_name = None
         self.client2 = None
         self.client2_name = None
 
+
     def broadcast(self):
         """
         we broadcast offer messages from our UDP socket until we have two TCP connections
         """
-        # address = scapy.get_if_addr(self.network)
+
+
         while not self.players_ready():
             # TODO: change network ip
             # self.network
-            self.udp_socket.sendto(self.msg, ('255.255.255.255', self.looking_port))
+            self.udp_socket.sendto(self.msg, (self.address, self.looking_port))
             time.sleep(1)
 
     def players_ready(self):
@@ -181,7 +186,6 @@ class Server:
                 return end_msg + f"{self.CBLUEBG}Congratulations to the winner: {self.client1_name}{self.CEND}"
 
     def check_time_record(self, time):
-        print(time)
         if not self.time_record:
             self.time_record = time
             return True
@@ -217,5 +221,5 @@ class Server:
 
 
 if __name__ == "__main__":
-    server = Server(17671)
+    server = Server(2031)
     server.start()

@@ -1,15 +1,22 @@
-import msvcrt
+# import msvcrt
 import socket
 import struct
 import time
 import os
+import platform
+import scapy.all as scapy
+from multiprocessing import Process
+import getch
+
+
+
 
 # System call
 os.system("")
 
 class Client:
 
-    def __init__(self):
+    def __init__(self, test_network=False):
         """
         in the constructor we initiate the Client class with the Udp port of 13117(given to us) and a TCP socket to connect to the Servers Tcp socket after
         it will be given to us
@@ -34,9 +41,19 @@ class Client:
 
         self.name = "Mr. Anderson"
 
+
+        if platform.system() == 'Linux':
+            if test_network:
+                self.network = scapy.get_if_addr('eth2')
+            else:
+                self.network = scapy.get_if_addr('eth1')
+        else:
+            self.network = ''
+        self.address = ".".join(self.network.split('.')[:2]) + '.255.255'
+
         self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.udp_socket.bind(('', self.looking_port))
+        self.udp_socket.bind((self.address, self.looking_port))
 
         self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -54,15 +71,20 @@ class Client:
         the second part of the message is the ip of the socket to connect to
         """
         while True:
+            try:
+                verifaction_tcp, adress = self.udp_socket.recvfrom(2048)
+                data = struct.unpack("IbH", verifaction_tcp)
+                if adress[0] == '172.1.0.15':
+                    continue
+                if (data is not None and data[0] == self.magic_cookie and data[1] == self.offer_message_type):
+                    self.tcp_port = data[2]
 
-            verifaction_tcp, adress = self.udp_socket.recvfrom(1024)
-            recieved_cookie,recieved_type,recieved_port = struct.unpack(">IbH",verifaction_tcp)
-            if (recieved_cookie == self.magic_cookie and recieved_type == self.offer_message_type):
-                self.tcp_port = recieved_port
+                    self.ip = adress[0]
+                    print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
+                    break
+            except:
+                pass
 
-                self.ip = adress[0]
-                print(self.BLUE +"Recieved offer from " + str(self.ip) + ", attempting to connect...\n" + self.CEND)
-                break
 
 
     def connecting_to_server(self):
@@ -81,13 +103,15 @@ class Client:
         team_msg = bytes(self.name, 'UTF-8')
         try:
             self.tcp_socket.send(team_msg)
-            welcome = self.tcp_socket.recv(1024)
+            welcome = self.tcp_socket.recv(2048)
             print(welcome.decode('UTF-8'))
             return True
         except:
             print(self.CRED + "Couldn't connect to server, listening for offer requests..." + self.CEND )
             return False
 
+    def get_key(self,key):
+        return getch.getch()
 
     def game_mode(self):
         """
@@ -98,22 +122,24 @@ class Client:
         if we have pressed a key and then we send this to the server and if we dont get an answer in 10 secconds we know there is a problem with a server because of the format
         :return: the message
         """
-        while msvcrt.kbhit():
-            msvcrt.getch()
+
         current = time.time()
         self.tcp_socket.setblocking(0)
         msg = None
-        while not msvcrt.kbhit():
+        key = [20]
+        p = Process(target=self.get_key, args=(key,))
+        p.start()
+        while p.is_alive():
             msg = self.expect_message()
             if msg:
+                p.kill()
                 break
-            #timeout in case the server has disconnected
+            # timeout in case the server has disconnected
             if current + 11 <= time.time():
                 raise Exception("Server disconnected")
 
         if not msg:
-            char = msvcrt.getch()
-            self.tcp_socket.send(char)
+            self.tcp_socket.send(p)
             while not msg:
                 msg = self.expect_message()
                 if current + 11 <= time.time():
@@ -128,7 +154,7 @@ class Client:
         """
         msg = None
         try:
-            msg = self.tcp_socket.recv(4096)
+            msg = self.tcp_socket.recv(2048)
         except:
             time.sleep(0.1)
         return msg
