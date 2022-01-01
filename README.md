@@ -2,7 +2,7 @@
 
 # Quick-Maths
 
-Client-Server communication between a server and a client
+A real time math game competition that has a clients-server interaction implemented by UDP, TCP and multithreading.
 ### Server
 the game host - producing math questions for the clients and deciding who's the winner by their responses.
 ### Client
